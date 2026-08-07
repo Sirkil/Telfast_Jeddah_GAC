@@ -179,8 +179,48 @@
       border-color: #ff3366;
       box-shadow: 0 15px 40px rgba(255, 51, 102, 0.6), 0 0 25px rgba(255, 51, 102, 0.5);
     }
-    
-    #maze-canvas { display: block; width: 100%; height: 100%; object-fit: contain; }
+
+    /* Hazy and blurred maze effect when dizziness mode is active */
+    #maze-canvas { 
+      display: block; 
+      width: 100%; 
+      height: 100%; 
+      object-fit: contain; 
+      transition: filter 0.4s ease;
+    }
+
+    #game-canvas-wrap.inverted #maze-canvas {
+      filter: blur(4px) brightness(0.9) contrast(0.5);
+      animation: dizzy-haze 1.8s ease-in-out infinite alternate;
+    }
+
+    #game-canvas-wrap.inverted::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle, rgba(255, 51, 102, 0.18) 0%, rgba(99, 1, 112, 0.45) 100%);
+      pointer-events: none;
+      backdrop-filter: blur(2px);
+      z-index: 15;
+      animation: dizzy-pulse 1.8s ease-in-out infinite alternate;
+    }
+
+    @keyframes dizzy-haze {
+      0% {
+        filter: blur(3px) brightness(0.95) contrast(1.05);
+      }
+      50% {
+        filter: blur(6px) brightness(1.1) contrast(0.9);
+      }
+      100% {
+        filter: blur(4px) brightness(0.85) contrast(1.15);
+      }
+    }
+
+    @keyframes dizzy-pulse {
+      0% { opacity: 0.5; }
+      100% { opacity: 0.9; }
+    }
 
     #controls-panel {
       width: calc(25% - 10px);
