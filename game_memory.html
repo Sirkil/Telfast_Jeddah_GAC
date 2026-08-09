@@ -280,7 +280,7 @@
         <div class="hud">
             <div class="hud-box">
                 <div class="hud-lbl">Time Left</div>
-                <div class="hud-val" id="timer-display">60s</div>
+                <div class="hud-val" id="timer-display">30s</div>
             </div>
             <div style="width:2px; height:45px; background:var(--border);"></div>
             <div class="hud-box">
@@ -349,7 +349,7 @@
         let lockBoard = false;
         let matches = 0;
 
-        let timeLeft = 60;
+        let timeLeft = 30;
         let timerInterval = null;
 
         function goBack() {
@@ -385,7 +385,7 @@
                 grid.appendChild(card);
             });
 
-            timeLeft = 60;
+            timeLeft = 30;
             matches = 0;
             document.getElementById('matches-display').textContent = '0 / 8';
             updateTimerDisplay();
