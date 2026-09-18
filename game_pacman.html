@@ -41,27 +41,29 @@
     }
     
     .game-container {
-      width: 100vw;
-      height: 100vh;
+      width: min(100vw, calc(100vh * (9 / 16)));
+      height: min(100vh, calc(100vw * (16 / 9)));
       max-width: 1080px;
       max-height: 1920px;
+      aspect-ratio: 9 / 16;
       margin: 0 auto;
-      padding: 20px;
+      padding: clamp(10px, 1.8vh, 18px);
       display: flex;
       flex-direction: column;
-      justify-content: space-between;
       align-items: center;
       position: fixed;
-      inset: 0;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
       box-sizing: border-box;
       overflow: hidden;
     }
     
     .auth-title {
-      font-size: 3.2rem;
+      font-size: clamp(1.8rem, 3.8vh, 3rem);
       font-weight: 900;
       color: #ffffff;
-      margin-bottom: 12px;
+      margin-bottom: clamp(6px, 1.4vh, 12px);
       text-shadow: 0 4px 20px rgba(99, 1, 112, 0.9);
       text-align: center;
     }
@@ -70,8 +72,8 @@
       background: linear-gradient(135deg, #f7a706, #d98e00);
       color: #3b0043;
       font-weight: 800;
-      font-size: 1.25rem;
-      padding: 16px 42px;
+      font-size: clamp(1rem, 2vh, 1.25rem);
+      padding: clamp(12px, 1.8vh, 16px) clamp(28px, 5vw, 42px);
       border: none;
       border-radius: 50px;
       cursor: pointer;
@@ -104,39 +106,59 @@
     }
     
     #screen-game { 
-      width: 100vw; 
-      height: 100vh;
-      max-width: 1080px; 
-      max-height: 1920px;
-      justify-content: space-between; 
-      padding: 20px; 
+      width: 100%; 
+      height: 100%; 
+      justify-content: flex-start; 
+      gap: clamp(6px, 1.2vh, 10px);
+      padding: clamp(6px, 1.2vh, 12px) clamp(8px, 1.5vw, 16px); 
+    }
+
+    .screen-logo-header {
+      display: flex;
+      gap: 16px;
+      justify-content: center;
+      align-items: center;
+      width: 100%;
+      flex-shrink: 0;
+      margin-bottom: 2px;
+    }
+
+    .screen-logo-header .logo-telfast {
+      height: clamp(26px, 3.8vh, 40px);
+      object-fit: contain;
+      filter: drop-shadow(0 4px 10px rgba(0,0,0,0.5));
+    }
+
+    .screen-logo-header .logo-opella {
+      height: clamp(16px, 2.4vh, 24px);
+      object-fit: contain;
+      filter: drop-shadow(0 4px 10px rgba(0,0,0,0.5));
     }
 
     .hud { 
       display: flex; 
       justify-content: space-between; 
       align-items: center; 
-      padding: 14px 28px; 
+      padding: clamp(6px, 1.1vh, 10px) clamp(12px, 2vw, 22px); 
       z-index: 10; 
       width: 100%; 
-      max-width: 1040px;
       background: rgba(99, 1, 112, 0.55);
       border: 2px solid var(--border);
       backdrop-filter: blur(12px);
-      border-radius: 20px;
+      border-radius: 18px;
       box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
       flex-shrink: 0;
     }
-    .hud-text { font-size: 1.8rem; font-weight: 800; color: #ffffff; }
+    .hud-text { font-size: clamp(1.1rem, 2vh, 1.55rem); font-weight: 800; color: #ffffff; }
     .hud-val { color: var(--accent); }
 
     .status-badge {
       display: none;
       background: #ff3366;
       color: #ffffff;
-      font-size: 1rem;
+      font-size: clamp(0.75rem, 1.3vh, 0.95rem);
       font-weight: 800;
-      padding: 8px 20px;
+      padding: 4px 14px;
       border-radius: 50px;
       animation: flash 0.8s infinite alternate;
     }
@@ -149,22 +171,18 @@
     #game-layout-row {
       display: flex;
       width: 100%;
-      max-width: 1040px;
-      height: calc(100vh - 140px);
-      max-height: 1650px;
-      gap: 16px;
+      flex: 1;
+      min-height: 0;
+      gap: clamp(8px, 1.5vw, 14px);
       align-items: center;
-      justify-content: space-between;
-      margin: auto 0;
+      justify-content: center;
+      margin: 0;
       overflow: hidden;
     }
     
     #game-canvas-wrap { 
-      width: calc(75% - 10px); 
-      flex: 0 0 calc(75% - 10px);
-      height: 100%;
       position: relative; 
-      border-radius: 20px; 
+      border-radius: 18px; 
       overflow: hidden; 
       box-shadow: 0 15px 40px rgba(99, 1, 112, 0.6), 0 0 25px rgba(247, 167, 6, 0.35); 
       border: 3px solid var(--accent);
@@ -173,6 +191,9 @@
       display: flex;
       align-items: center;
       justify-content: center;
+      box-sizing: border-box;
+      flex-shrink: 0;
+      aspect-ratio: 11 / 21;
     }
 
     #game-canvas-wrap.inverted {
@@ -185,68 +206,52 @@
       display: block; 
       width: 100%; 
       height: 100%; 
-      object-fit: contain; 
       transition: filter 0.4s ease;
     }
 
     #game-canvas-wrap.inverted #maze-canvas {
-      filter: blur(4px) brightness(0.9) contrast(0.5);
-      animation: dizzy-haze 1.8s ease-in-out infinite alternate;
+      filter: blur(2.5px) brightness(0.95);
     }
 
     #game-canvas-wrap.inverted::after {
       content: '';
       position: absolute;
       inset: 0;
-      background: radial-gradient(circle, rgba(255, 51, 102, 0.18) 0%, rgba(99, 1, 112, 0.45) 100%);
+      background: radial-gradient(circle, rgba(255, 51, 102, 0.22) 0%, rgba(99, 1, 112, 0.45) 100%);
       pointer-events: none;
-      backdrop-filter: blur(2px);
       z-index: 15;
       animation: dizzy-pulse 1.8s ease-in-out infinite alternate;
     }
 
-    @keyframes dizzy-haze {
-      0% {
-        filter: blur(3px) brightness(0.95) contrast(1.05);
-      }
-      50% {
-        filter: blur(6px) brightness(1.1) contrast(0.9);
-      }
-      100% {
-        filter: blur(4px) brightness(0.85) contrast(1.15);
-      }
-    }
-
     @keyframes dizzy-pulse {
-      0% { opacity: 0.5; }
-      100% { opacity: 0.9; }
+      0% { opacity: 0.35; }
+      100% { opacity: 0.8; }
     }
 
     #controls-panel {
-      width: calc(25% - 10px);
-      flex: 0 0 calc(25% - 10px);
-      height: 100%;
+      width: clamp(90px, 26%, 210px);
+      flex: 0 0 clamp(90px, 26%, 210px);
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 20px;
+      gap: clamp(8px, 1.8vh, 18px);
       background: rgba(99, 1, 112, 0.5);
       border: 2px solid var(--border);
       backdrop-filter: blur(12px);
-      border-radius: 20px;
-      padding: 16px 6px;
+      border-radius: 18px;
+      padding: clamp(10px, 1.5vh, 20px) 6px;
       box-shadow: 0 8px 30px rgba(0,0,0,0.4);
     }
 
     .dpad-btn {
-      width: 60px;
-      height: 60px;
+      width: clamp(38px, 5.2vh, 60px);
+      height: clamp(38px, 5.2vh, 60px);
       border-radius: 50%;
       background: linear-gradient(135deg, #630170, #400049);
       border: 2.5px solid var(--accent);
       color: #ffffff;
-      font-size: 1.6rem;
+      font-size: clamp(1.1rem, 2.3vh, 1.6rem);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -266,16 +271,19 @@
 
     .sprite {
       position: absolute;
+      top: 0;
+      left: 0;
       z-index: 10;
       display: none; 
       object-fit: contain;
-      filter: drop-shadow(0 2px 6px rgba(0,0,0,0.6));
-      transition: opacity 0.3s ease, filter 0.3s ease;
+      filter: drop-shadow(0 2px 5px rgba(0,0,0,0.5));
+      will-change: transform;
+      pointer-events: none;
     }
 
     .sprite.frightened {
-      opacity: 0.4;
-      filter: drop-shadow(0 0 10px #00ffff) drop-shadow(0 0 18px #0088ff);
+      opacity: 0.45;
+      filter: drop-shadow(0 0 8px #00ffff);
       animation: pulse-ghost 0.6s infinite alternate ease-in-out;
     }
 
@@ -284,8 +292,8 @@
     }
 
     @keyframes pulse-ghost {
-      from { opacity: 0.3; transform: translate(-50%, -50%) scale(0.95); }
-      to { opacity: 0.55; transform: translate(-50%, -50%) scale(1.05); }
+      from { opacity: 0.35; }
+      to { opacity: 0.65; }
     }
 
     @keyframes flash-ghost {
@@ -336,6 +344,11 @@
   </div>
 
   <div class="game-container" id="screen-game" style="display: none;">
+    <div class="screen-logo-header">
+      <img src="assets/telfast_logo.png" alt="Telfast Logo" class="logo-telfast">
+      <img src="assets/opella_logo.png" alt="Opella Logo" class="logo-opella">
+    </div>
+
     <div class="hud">
       <div class="hud-text">Lives <span class="hud-val" id="hud-lives">❤️ ❤️ ❤️</span></div>
       <div class="status-badge" id="hud-status">⚠️ INVERTED CONTROLS (10s)</div>
@@ -354,11 +367,11 @@
       </div>
 
       <div id="controls-panel">
-        <div style="font-size: 0.8rem; color: var(--muted); font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 5px;">Controls</div>
+        <div style="font-size: clamp(0.7rem, 1.4vh, 0.85rem); color: var(--muted); font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 2px;">Controls</div>
         
         <button class="dpad-btn" onclick="handleInput(0, -1)" title="Up">⬆️</button>
         
-        <div style="display: flex; gap: 8px;">
+        <div style="display: flex; gap: clamp(4px, 1vw, 8px); justify-content: center; width: 100%;">
           <button class="dpad-btn" onclick="handleInput(-1, 0)" title="Left">⬅️</button>
           <button class="dpad-btn" onclick="handleInput(1, 0)" title="Right">➡️</button>
         </div>
@@ -369,8 +382,12 @@
   </div>
 
   <div class="game-container" id="screen-result" style="display: none; text-align: center; justify-content: center;">
-    <div style="background: rgba(99, 1, 112, 0.6); border: 2px solid var(--accent); backdrop-filter: blur(15px); padding: 40px 30px; border-radius: 28px; box-shadow: 0 15px 45px rgba(0,0,0,0.5); width: 100%; max-width: 500px; display: flex; flex-direction: column; align-items: center;">
-      <div style="font-size: 5.5rem; margin-bottom: 10px;" id="result-icon">🏆</div>
+    <div style="background: rgba(99, 1, 112, 0.6); border: 2px solid var(--accent); backdrop-filter: blur(15px); padding: 36px 30px; border-radius: 28px; box-shadow: 0 15px 45px rgba(0,0,0,0.5); width: 100%; max-width: 500px; display: flex; flex-direction: column; align-items: center;">
+      <div style="display: flex; gap: 16px; justify-content: center; align-items: center; margin-bottom: 16px;">
+        <img src="assets/telfast_logo.png" alt="Telfast Logo" style="max-height: 48px; object-fit: contain; filter: drop-shadow(0 4px 10px rgba(0,0,0,0.5));">
+        <img src="assets/opella_logo.png" alt="Opella Logo" style="max-height: 28px; object-fit: contain; filter: drop-shadow(0 4px 10px rgba(0,0,0,0.5));">
+      </div>
+      <div style="font-size: 5rem; margin-bottom: 10px;" id="result-icon">🏆</div>
       <div class="auth-title" id="result-title">Success!</div>
       <div style="font-size: 2.6rem; font-weight: 900; color: var(--accent); margin-bottom: 20px; text-shadow: 0 4px 15px rgba(247,167,6,0.5);" id="result-score">You completed the game!</div>
       <div id="result-actions" style="width: 100%; display: flex; flex-direction: column; align-items: center; gap: 15px;">
@@ -430,7 +447,7 @@
       [1,2,1,1,2,1,2,1,1,2,1],
       [1,2,2,2,2,1,2,2,2,2,1],
       [1,1,1,1,2,1,2,1,1,1,1],
-      [0,0,0,1,2,0,2,1,0,0,0],
+      [0,0,0,1,2,2,2,1,0,0,0],
       [1,1,1,1,2,1,2,1,1,1,1],
       [1,3,2,2,2,1,2,2,2,3,1],
       [1,2,1,1,2,1,2,1,1,2,1],
@@ -449,7 +466,153 @@
     let map = [];
 
     let player = { r: 15, c: 5, dr: 0, dc: 0, nextDr: 0, nextDc: 0, x: 0, y: 0 };
-    let ghosts = [];
+    let lastRowW = 0, lastRowH = 0;
+
+    // Performance caching: avoid getBoundingClientRect() & DOM queries in draw()
+    let cachedRenderW = 440;
+    let cachedRenderH = 840;
+    let cachedOffsetX = 0;
+    let cachedOffsetY = 0;
+    let cachedSpriteSize = 36;
+    let pSprite = null;
+    let ghostSprites = [];
+    let wallCanvas = null;
+    let wallCtx = null;
+    let lastLoopTime = 0;
+
+    function initWallCanvas() {
+      if (!wallCanvas) {
+        wallCanvas = document.createElement('canvas');
+      }
+      wallCanvas.width = cols * ts;
+      wallCanvas.height = rows * ts;
+      wallCtx = wallCanvas.getContext('2d');
+      renderWalls();
+    }
+
+    function renderWalls() {
+      if (!wallCtx) return;
+      wallCtx.clearRect(0, 0, wallCanvas.width, wallCanvas.height);
+      
+      // Static background fill
+      wallCtx.fillStyle = 'rgba(25, 3, 30, 0.95)';
+      wallCtx.fillRect(0, 0, wallCanvas.width, wallCanvas.height);
+      
+      // Static background grid
+      wallCtx.strokeStyle = 'rgba(99, 1, 112, 0.35)';
+      wallCtx.lineWidth = 1;
+      for(let i=0; i<=cols; i++) { wallCtx.beginPath(); wallCtx.moveTo(i*ts, 0); wallCtx.lineTo(i*ts, wallCanvas.height); wallCtx.stroke(); }
+      for(let i=0; i<=rows; i++) { wallCtx.beginPath(); wallCtx.moveTo(0, i*ts); wallCtx.lineTo(wallCanvas.width, i*ts); wallCtx.stroke(); }
+      
+      // Render static walls once
+      for(let r=0; r<rows; r++) {
+        for(let c=0; c<cols; c++) {
+          if (baseMap[r][c] === 1) { 
+            let x = c*ts; 
+            let y = r*ts;
+            let m = 3; 
+            
+            let x1 = x + m; let y1 = y + m;
+            let w = ts - 2*m; let h = ts - 2*m;
+            
+            if (r > 0 && baseMap[r-1][c] === 1) { y1 -= m; h += m; }
+            if (r < rows-1 && baseMap[r+1][c] === 1) { h += m; }
+            if (c > 0 && baseMap[r][c-1] === 1) { x1 -= m; w += m; }
+            if (c < cols-1 && baseMap[r][c+1] === 1) { w += m; }
+
+            wallCtx.fillStyle = '#400049';
+            wallCtx.beginPath();
+            wallCtx.roundRect(x1, y1+4, w, h, 6);
+            wallCtx.fill();
+
+            wallCtx.fillStyle = '#630170';
+            wallCtx.beginPath();
+            wallCtx.roundRect(x1, y1, w, h, 6);
+            wallCtx.fill();
+
+            wallCtx.strokeStyle = controlsInverted ? '#ff3366' : '#f7a706';
+            wallCtx.lineWidth = 2;
+            wallCtx.stroke();
+          }
+        }
+      }
+    }
+
+    function updateCanvasWrapSize() {
+      const row = document.getElementById('game-layout-row');
+      const wrap = document.getElementById('game-canvas-wrap');
+      const panel = document.getElementById('controls-panel');
+      if (!row || !wrap || !panel) return;
+
+      const rowW = row.clientWidth;
+      const rowH = row.clientHeight;
+      if (rowW <= 0 || rowH <= 0) return;
+
+      lastRowW = rowW;
+      lastRowH = rowH;
+
+      const computedGap = parseFloat(window.getComputedStyle(row).gap) || 12;
+      const panelW = panel.offsetWidth || Math.round(rowW * 0.26);
+      const maxWrapW = Math.max(50, rowW - panelW - computedGap);
+      const maxWrapH = rowH;
+
+      const mazeAspect = cols / rows; // 11 / 21 = 0.5238095
+
+      let finalW, finalH;
+      if (maxWrapW / maxWrapH > mazeAspect) {
+        // Height-constrained: wrap height matches row height, width matches maze
+        finalH = maxWrapH;
+        finalW = finalH * mazeAspect;
+      } else {
+        // Width-constrained: wrap width is available width, height matches maze
+        finalW = maxWrapW;
+        finalH = finalW / mazeAspect;
+      }
+
+      finalW = Math.floor(finalW);
+      finalH = Math.floor(finalH);
+
+      const wPx = finalW + 'px';
+      const hPx = finalH + 'px';
+
+      wrap.style.width = wPx;
+      wrap.style.height = hPx;
+      wrap.style.flex = '0 0 ' + wPx;
+
+      panel.style.height = hPx;
+
+      // Cache DOM metrics strictly during layout changes, NEVER inside draw()
+      const wrapRect = wrap.getBoundingClientRect();
+      const canvasRect = cvs.getBoundingClientRect();
+      cachedRenderW = canvasRect.width || finalW;
+      cachedRenderH = canvasRect.height || finalH;
+      cachedOffsetX = canvasRect.left - wrapRect.left;
+      cachedOffsetY = canvasRect.top - wrapRect.top;
+      cachedSpriteSize = Math.max(16, Math.round(ts / (cols * ts) * cachedRenderW * 0.9));
+
+      if (pSprite) {
+        pSprite.style.width = cachedSpriteSize + 'px';
+        pSprite.style.height = cachedSpriteSize + 'px';
+      }
+      ghostSprites.forEach(s => {
+        if (s) {
+          s.style.width = cachedSpriteSize + 'px';
+          s.style.height = cachedSpriteSize + 'px';
+        }
+      });
+    }
+
+    window.addEventListener('resize', updateCanvasWrapSize);
+    window.addEventListener('orientationchange', updateCanvasWrapSize);
+
+    if (window.ResizeObserver) {
+      window.addEventListener('DOMContentLoaded', () => {
+        const roRow = document.getElementById('game-layout-row');
+        if (roRow) new ResizeObserver(() => updateCanvasWrapSize()).observe(roRow);
+      });
+      const roRow = document.getElementById('game-layout-row');
+      if (roRow) new ResizeObserver(() => updateCanvasWrapSize()).observe(roRow);
+    }
 
     function proceedFromStart() {
       document.getElementById('screen-start').style.display = 'none';
@@ -459,21 +622,34 @@
     function initCanvas() {
       cvs.width = cols * ts;
       cvs.height = rows * ts;
+
+      if (!pSprite) {
+        pSprite = document.getElementById('player-sprite');
+      }
+      if (ghostSprites.length === 0) {
+        for (let i = 0; i < 5; i++) {
+          ghostSprites.push(document.getElementById('ghost-sprite-' + i));
+        }
+      }
+
+      initWallCanvas();
     }
 
     function startGame() {
       document.getElementById('screen-game').style.display = 'flex';
       
       initCanvas();
+      updateCanvasWrapSize();
+      requestAnimationFrame(updateCanvasWrapSize);
+      setTimeout(updateCanvasWrapSize, 60);
       
-      document.getElementById('player-sprite').style.display = 'block';
-      for (let i = 0; i < 5; i++) {
-        const el = document.getElementById('ghost-sprite-' + i);
+      if (pSprite) pSprite.style.display = 'block';
+      ghostSprites.forEach(el => {
         if (el) {
           el.style.display = 'block';
           el.className = 'sprite';
         }
-      }
+      });
 
       lives = 3;
       timeLeft = 60; 
@@ -575,6 +751,7 @@
 
     function cancelDrowsinessEffect() {
       controlsInverted = false;
+      renderWalls();
       if (controlsInvertedTimer) {
         clearInterval(controlsInvertedTimer);
         controlsInvertedTimer = null;
@@ -618,7 +795,7 @@
 
     function updateGhostStyles() {
       ghosts.forEach((g, i) => {
-        const el = document.getElementById('ghost-sprite-' + i);
+        const el = ghostSprites[i] || document.getElementById('ghost-sprite-' + i);
         if (!el) return;
         if (isPowerMode) {
           if (powerModeTimeLeft <= 2) {
@@ -636,6 +813,7 @@
       if (isPowerMode) return;
 
       controlsInverted = true;
+      renderWalls();
       controlsInvertedTimeLeft = duration;
       
       const statusEl = document.getElementById('hud-status');
@@ -657,6 +835,7 @@
           clearInterval(controlsInvertedTimer);
           controlsInvertedTimer = null;
           controlsInverted = false;
+          renderWalls();
           if (!isPowerMode) statusEl.style.display = 'none';
           document.getElementById('game-canvas-wrap').classList.remove('inverted');
         }
@@ -664,12 +843,21 @@
     }
 
     // --- GAME LOOP ---
-    function loop() {
-      update(); draw();
+    function loop(now) {
+      if (!lastLoopTime) lastLoopTime = now || performance.now();
+      const currentNow = now || performance.now();
+      let dt = (currentNow - lastLoopTime) / 1000;
+      lastLoopTime = currentNow;
+
+      if (dt > 0.1) dt = 0.1;
+      const stepFactor = dt * 60;
+
+      update(stepFactor);
+      draw();
       if(timeLeft > 0 && lives > 0) gameLoopId = requestAnimationFrame(loop);
     }
 
-    function update() {
+    function update(stepFactor = 1) {
       let targetX = player.c * ts; 
       let targetY = player.r * ts;
       
@@ -679,7 +867,7 @@
 
       let dist = Math.abs(player.x - targetX) + Math.abs(player.y - targetY);
       
-      if (dist < 2) { 
+      if (dist < 2.5) { 
         player.x = targetX; 
         player.y = targetY;
         
@@ -721,8 +909,8 @@
         }
       } 
       
-      player.x += player.dc * ts * 0.1; 
-      player.y += player.dr * ts * 0.1;
+      player.x += player.dc * ts * 0.1 * stepFactor; 
+      player.y += player.dr * ts * 0.1 * stepFactor;
 
       // Ghosts Update
       ghosts.forEach(g => {
@@ -733,7 +921,7 @@
         }
 
         let gdist = Math.abs(g.x - gtx) + Math.abs(g.y - gty);
-        if (gdist < 2) {
+        if (gdist < 2.5) {
           g.x = gtx; g.y = gty;
           let possibleMoves = [];
           const dirs = [{dr:-1, dc:0}, {dr:1, dc:0}, {dr:0, dc:-1}, {dr:0, dc:1}];
@@ -762,7 +950,7 @@
           if (g.c >= cols) g.c = 0;
           g.r += g.dr;
         } else {
-          g.x += g.dc * ts * g.speed; g.y += g.dr * ts * g.speed;
+          g.x += g.dc * ts * g.speed * stepFactor; g.y += g.dr * ts * g.speed * stepFactor;
         }
 
         if (Math.abs(player.x - g.x) < ts/1.5 && Math.abs(player.y - g.y) < ts/1.5) {
@@ -830,58 +1018,32 @@
     function draw() {
       ctx.clearRect(0, 0, cvs.width, cvs.height);
       
-      ctx.fillStyle = 'rgba(25, 3, 30, 0.95)';
-      ctx.fillRect(0, 0, cvs.width, cvs.height);
-      
-      ctx.strokeStyle = 'rgba(99, 1, 112, 0.35)';
-      ctx.lineWidth = 1;
-      for(let i=0; i<=cols; i++) { ctx.beginPath(); ctx.moveTo(i*ts, 0); ctx.lineTo(i*ts, cvs.height); ctx.stroke(); }
-      for(let i=0; i<=rows; i++) { ctx.beginPath(); ctx.moveTo(0, i*ts); ctx.lineTo(cvs.width, i*ts); ctx.stroke(); }
-      
+      // 1. Draw cached background and maze walls in a single ultra-fast blit
+      if (wallCanvas) {
+        ctx.drawImage(wallCanvas, 0, 0);
+      }
+
+      // 2. Draw white dots with a single batched path (no shadowBlur overhead)
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
       for(let r=0; r<rows; r++) {
         for(let c=0; c<cols; c++) {
-          if (map[r][c] === 1) { 
-            let x = c*ts; 
-            let y = r*ts;
-            let m = 3; 
-            
-            let x1 = x + m; let y1 = y + m;
-            let w = ts - 2*m; let h = ts - 2*m;
-            
-            if (r > 0 && map[r-1][c] === 1) { y1 -= m; h += m; }
-            if (r < rows-1 && map[r+1][c] === 1) { h += m; }
-            if (c > 0 && map[r][c-1] === 1) { x1 -= m; w += m; }
-            if (c < cols-1 && map[r][c+1] === 1) { w += m; }
+          if (map[r][c] === 2) {
+            let cx = c*ts + ts/2;
+            let cy = r*ts + ts/2;
+            ctx.moveTo(cx + ts*0.16, cy);
+            ctx.arc(cx, cy, ts*0.16, 0, Math.PI*2);
+          }
+        }
+      }
+      ctx.fill();
 
-            ctx.fillStyle = '#400049';
-            ctx.beginPath();
-            ctx.roundRect(x1, y1+4, w, h, 6);
-            ctx.fill();
-
-            ctx.fillStyle = '#630170';
-            ctx.beginPath();
-            ctx.roundRect(x1, y1, w, h, 6);
-            ctx.fill();
-
-            ctx.strokeStyle = controlsInverted ? '#ff3366' : '#f7a706';
-            ctx.lineWidth = 2;
-            ctx.stroke();
-
-          } else if (map[r][c] === 2) {
-            // Classic White Dots for maze paths
-            ctx.fillStyle = '#ffffff';
-            ctx.shadowColor = 'rgba(255, 255, 255, 0.9)';
-            ctx.shadowBlur = 6;
-            ctx.beginPath();
-            ctx.arc(c*ts + ts/2, r*ts + ts/2, ts*0.16, 0, Math.PI*2);
-            ctx.fill();
-            ctx.shadowBlur = 0;
-
-          } else if (map[r][c] === 3) {
-            // Telfast Pack Items (120mg and 180mg packs)
+      // 3. Draw Telfast Packs
+      for(let r=0; r<rows; r++) {
+        for(let c=0; c<cols; c++) {
+          if (map[r][c] === 3) {
             const packIdx = (r + c) % packImgs.length;
             const imgToDraw = packImgs[packIdx];
-            
             if (imgToDraw && imgToDraw.complete && imgToDraw.naturalWidth !== 0) {
               ctx.drawImage(imgToDraw, c*ts + ts*0.05, r*ts + ts*0.05, ts*0.9, ts*0.9);
             }
@@ -889,16 +1051,7 @@
         }
       }
 
-      // Exact pixel positioning of PacMan & Ghosts using getBoundingClientRect
-      const wrapEl = document.getElementById('game-canvas-wrap');
-      const canvasRect = cvs.getBoundingClientRect();
-      const wrapRect = wrapEl.getBoundingClientRect();
-
-      const offsetX = canvasRect.left - wrapRect.left;
-      const offsetY = canvasRect.top - wrapRect.top;
-      const canvasW = canvasRect.width;
-      const canvasH = canvasRect.height;
-
+      // 4. Update PacMan & Ghost positions via GPU transform: translate3d
       const cvsW = cols * ts;
       const cvsH = rows * ts;
 
@@ -908,21 +1061,20 @@
       else if (player.dr === 1) angle = 90;
       else if (player.dr === -1) angle = -90;
 
-      const pSprite = document.getElementById('player-sprite');
-      pSprite.style.left = (offsetX + (player.x + ts/2) / cvsW * canvasW) + 'px';
-      pSprite.style.top = (offsetY + (player.y + ts/2) / cvsH * canvasH) + 'px';
-      pSprite.style.width = (ts / cvsW * canvasW * 0.9) + 'px';
-      pSprite.style.height = (ts / cvsH * canvasH * 0.9) + 'px';
-      pSprite.style.transform = `translate(-50%, -50%) rotate(${angle}deg)`;
+      if (pSprite) {
+        const px = Math.round(cachedOffsetX + (player.x + ts/2) / cvsW * cachedRenderW);
+        const py = Math.round(cachedOffsetY + (player.y + ts/2) / cvsH * cachedRenderH);
+        pSprite.style.transform = `translate3d(${px}px, ${py}px, 0) translate(-50%, -50%) rotate(${angle}deg)`;
+      }
 
-      ghosts.forEach((g, i) => {
-        const gSprite = document.getElementById('ghost-sprite-' + i);
-        gSprite.style.left = (offsetX + (g.x + ts/2) / cvsW * canvasW) + 'px';
-        gSprite.style.top = (offsetY + (g.y + ts/2) / cvsH * canvasH) + 'px';
-        gSprite.style.width = (ts / cvsW * canvasW * 0.9) + 'px';
-        gSprite.style.height = (ts / cvsH * canvasH * 0.9) + 'px';
-        gSprite.style.transform = `translate(-50%, -50%)`;
-      });
+      for (let i = 0; i < ghosts.length; i++) {
+        const g = ghosts[i];
+        const gSprite = ghostSprites[i];
+        if (!gSprite) continue;
+        const gx = Math.round(cachedOffsetX + (g.x + ts/2) / cvsW * cachedRenderW);
+        const gy = Math.round(cachedOffsetY + (g.y + ts/2) / cvsH * cachedRenderH);
+        gSprite.style.transform = `translate3d(${gx}px, ${gy}px, 0) translate(-50%, -50%)`;
+      }
     }
 
     // --- GAME OVER ---
@@ -935,11 +1087,10 @@
       const toastEl = document.getElementById('toast');
       if (toastEl) toastEl.classList.remove('show');
       
-      document.getElementById('player-sprite').style.display = 'none';
-      for (let i = 0; i < 5; i++) {
-        const el = document.getElementById('ghost-sprite-' + i);
+      if (pSprite) pSprite.style.display = 'none';
+      ghostSprites.forEach(el => {
         if (el) el.style.display = 'none';
-      }
+      });
 
       document.getElementById('screen-game').style.display = 'none';
       document.getElementById('screen-result').style.display = 'flex';

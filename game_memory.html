@@ -292,8 +292,12 @@
     </div>
 
     <div class="game-container" id="screen-result" style="display: none; text-align: center; justify-content: center;">
-        <div style="background: rgba(99, 1, 112, 0.6); border: 2px solid var(--accent); backdrop-filter: blur(15px); padding: 40px 30px; border-radius: 28px; box-shadow: 0 15px 45px rgba(0,0,0,0.5); width: 100%; max-width: 500px; display: flex; flex-direction: column; align-items: center;">
-            <div style="font-size: 5.5rem; margin-bottom: 10px;" id="result-icon">🏆</div>
+        <div style="background: rgba(99, 1, 112, 0.6); border: 2px solid var(--accent); backdrop-filter: blur(15px); padding: 36px 30px; border-radius: 28px; box-shadow: 0 15px 45px rgba(0,0,0,0.5); width: 100%; max-width: 500px; display: flex; flex-direction: column; align-items: center;">
+            <div style="display: flex; gap: 16px; align-items: center; margin-bottom: 16px;">
+                <img src="assets/telfast_logo.png" alt="Telfast" style="height: 44px; object-fit: contain;">
+                <img src="assets/opella_logo.png" alt="Opella" style="height: 26px; object-fit: contain;">
+            </div>
+            <div style="font-size: 5rem; margin-bottom: 10px;" id="result-icon">🏆</div>
             <div class="auth-title" id="result-title" style="margin-bottom: 8px;">Success!</div>
             <div style="font-size: 2.6rem; font-weight:900; color: var(--accent); margin-bottom: 12px; text-shadow: 0 4px 15px rgba(247,167,6,0.5);" id="result-score">You completed the game!</div>
             <div style="color:var(--muted); font-size: 1.2rem; margin-bottom: 30px;" id="result-breakdown">Great job finding all matching pairs!</div>
@@ -393,6 +397,8 @@
             lockBoard = true;
             const allCards = document.querySelectorAll('.memory-card');
 
+            showToast("Memorize the cards! ⏳ (7s)");
+
             setTimeout(() => {
                 allCards.forEach(c => c.classList.add('flipped'));
             }, 100);
@@ -402,8 +408,9 @@
                 setTimeout(() => {
                     lockBoard = false;
                     timerInterval = setInterval(tickTimer, 1000);
+                    showToast("Go! Find all pairs! 🚀");
                 }, 600);
-            }, 2100);
+            }, 7100);
         }
 
         function tickTimer() {
