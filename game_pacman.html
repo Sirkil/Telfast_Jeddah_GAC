@@ -265,35 +265,7 @@
     }
 
     .sprite {
-      position: absolute;
-      top: 0;
-      left: 0;
-      z-index: 10;
-      display: none; 
-      object-fit: contain;
-      will-change: transform;
-      pointer-events: none;
-      backface-visibility: hidden;
-    }
-
-    .sprite.frightened {
-      opacity: 0.45;
-      filter: drop-shadow(0 0 8px #00ffff);
-      animation: pulse-ghost 0.6s infinite alternate ease-in-out;
-    }
-
-    .sprite.frightened-warning {
-      animation: flash-ghost 0.25s infinite alternate ease-in-out;
-    }
-
-    @keyframes pulse-ghost {
-      from { opacity: 0.35; }
-      to { opacity: 0.65; }
-    }
-
-    @keyframes flash-ghost {
-      from { opacity: 0.2; }
-      to { opacity: 0.8; }
+      display: none !important;
     }
 
     .toast {
@@ -354,25 +326,19 @@
     <div id="game-layout-row">
       <div id="game-canvas-wrap">
         <canvas id="maze-canvas"></canvas>
-        <img id="player-sprite" src="assets/pacmanAsset.png" class="sprite" alt="PacMan">
-        <img id="ghost-sprite-0" src="assets/ghost1.png" class="sprite" alt="Ghost">
-        <img id="ghost-sprite-1" src="assets/ghost2.png" class="sprite" alt="Ghost">
-        <img id="ghost-sprite-2" src="assets/ghost3.png" class="sprite" alt="Ghost">
-        <img id="ghost-sprite-3" src="assets/ghost4.png" class="sprite" alt="Ghost">
-        <img id="ghost-sprite-4" src="assets/drowsiness_monster.png" class="sprite" alt="Drowsiness Monster">
       </div>
 
       <div id="controls-panel">
         <div style="font-size: clamp(0.7rem, 1.4vh, 0.85rem); color: var(--muted); font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 2px;">Controls</div>
         
-        <button class="dpad-btn" onclick="handleInput(0, -1)" title="Up">⬆️</button>
+        <button class="dpad-btn" id="btn-up" onclick="handleInput(0, -1)" title="Up">⬆️</button>
         
         <div style="display: flex; gap: clamp(4px, 1vw, 8px); justify-content: center; width: 100%;">
-          <button class="dpad-btn" onclick="handleInput(-1, 0)" title="Left">⬅️</button>
-          <button class="dpad-btn" onclick="handleInput(1, 0)" title="Right">➡️</button>
+          <button class="dpad-btn" id="btn-left" onclick="handleInput(-1, 0)" title="Left">⬅️</button>
+          <button class="dpad-btn" id="btn-right" onclick="handleInput(1, 0)" title="Right">➡️</button>
         </div>
         
-        <button class="dpad-btn" onclick="handleInput(0, 1)" title="Down">⬇️</button>
+        <button class="dpad-btn" id="btn-down" onclick="handleInput(0, 1)" title="Down">⬇️</button>
       </div>
     </div>
   </div>
@@ -410,6 +376,15 @@
     let totalPellets = 0;
     let collectedPellets = 0;
 
+    // --- VERTICAL MAP & ENGINE (11 cols x 21 rows) ---
+    const cvs = document.getElementById('maze-canvas');
+    const ctx = cvs.getContext('2d');
+    
+    const cols = 11; 
+    const rows = 21; 
+    const ts = 40; 
+    const playerSpeed = 5.6; // Crisp, fast arcade movement speed (0.14 * ts)
+
     // Telfast Pack Assets ONLY (120mg & 180mg packs)
     const packSrcs = [
       'assets/120mg_Pack.png',
@@ -422,13 +397,39 @@
       return img;
     });
 
-    // --- VERTICAL MAP & ENGINE (11 cols x 21 rows) ---
-    const cvs = document.getElementById('maze-canvas');
-    const ctx = cvs.getContext('2d');
-    
-    const cols = 11; 
-    const rows = 21; 
-    let ts = 40; 
+    // Performance pack caching: pre-render packs to low-res canvases once, avoiding 4MB downscaling every frame
+    const packCaches = [];
+    packImgs.forEach((img, idx) => {
+      function cachePack() {
+        const c = document.createElement('canvas');
+        c.width = ts * 2;
+        c.height = ts * 2;
+        const ctxP = c.getContext('2d');
+        ctxP.imageSmoothingEnabled = true;
+        ctxP.imageSmoothingQuality = 'high';
+        ctxP.drawImage(img, 0, 0, ts * 2, ts * 2);
+        packCaches[idx] = c;
+      }
+      if (img.complete && img.naturalWidth > 0) cachePack();
+      else img.onload = cachePack;
+    });
+
+    // Character sprite images for direct GPU-accelerated canvas rendering
+    const playerImg = new Image();
+    playerImg.src = 'assets/pacmanAsset.png';
+
+    const ghostSrcs = [
+      'assets/ghost1.png',
+      'assets/ghost2.png',
+      'assets/ghost3.png',
+      'assets/ghost4.png',
+      'assets/drowsiness_monster.png'
+    ];
+    const ghostImgs = ghostSrcs.map(src => {
+      const img = new Image();
+      img.src = src;
+      return img;
+    });
 
     // Vertical Map Layout: 11 columns x 21 rows
     // 0 = empty space
@@ -460,21 +461,14 @@
     ];
 
     let map = [];
+    let player = { r: 15, c: 5, dr: 0, dc: 0, nextDr: 0, nextDc: 0, x: 5 * ts, y: 15 * ts };
+    let ghosts = [];
 
-    let player = { r: 15, c: 5, dr: 0, dc: 0, nextDr: 0, nextDc: 0, x: 0, y: 0 };
-    let lastRowW = 0, lastRowH = 0;
-
-    // Performance caching: avoid getBoundingClientRect() & DOM queries in draw()
-    let cachedRenderW = 440;
-    let cachedRenderH = 840;
-    let cachedOffsetX = 0;
-    let cachedOffsetY = 0;
-    let cachedSpriteSize = 36;
-    let pSprite = null;
-    let ghostSprites = [];
     let wallCanvas = null;
     let wallCtx = null;
     let lastLoopTime = 0;
+    let accumulator = 0;
+    const FIXED_STEP = 1 / 60; // 60Hz deterministic physics step
 
     function initWallCanvas() {
       if (!wallCanvas) {
@@ -544,9 +538,6 @@
       const rowH = row.clientHeight;
       if (rowW <= 0 || rowH <= 0) return;
 
-      lastRowW = rowW;
-      lastRowH = rowH;
-
       const computedGap = parseFloat(window.getComputedStyle(row).gap) || 12;
       const panelW = panel.offsetWidth || Math.round(rowW * 0.26);
       const maxWrapW = Math.max(50, rowW - panelW - computedGap);
@@ -556,11 +547,9 @@
 
       let finalW, finalH;
       if (maxWrapW / maxWrapH > mazeAspect) {
-        // Height-constrained: wrap height matches row height, width matches maze
         finalH = maxWrapH;
         finalW = finalH * mazeAspect;
       } else {
-        // Width-constrained: wrap width is available width, height matches maze
         finalW = maxWrapW;
         finalH = finalW / mazeAspect;
       }
@@ -576,26 +565,6 @@
       wrap.style.flex = '0 0 ' + wPx;
 
       panel.style.height = hPx;
-
-      // Cache DOM metrics strictly during layout changes, NEVER inside draw()
-      const wrapRect = wrap.getBoundingClientRect();
-      const canvasRect = cvs.getBoundingClientRect();
-      cachedRenderW = canvasRect.width || finalW;
-      cachedRenderH = canvasRect.height || finalH;
-      cachedOffsetX = canvasRect.left - wrapRect.left;
-      cachedOffsetY = canvasRect.top - wrapRect.top;
-      cachedSpriteSize = Math.max(16, Math.round(ts / (cols * ts) * cachedRenderW * 0.9));
-
-      if (pSprite) {
-        pSprite.style.width = cachedSpriteSize + 'px';
-        pSprite.style.height = cachedSpriteSize + 'px';
-      }
-      ghostSprites.forEach(s => {
-        if (s) {
-          s.style.width = cachedSpriteSize + 'px';
-          s.style.height = cachedSpriteSize + 'px';
-        }
-      });
     }
 
     let resizeRAF = 0;
@@ -624,16 +593,6 @@
     function initCanvas() {
       cvs.width = cols * ts;
       cvs.height = rows * ts;
-
-      if (!pSprite) {
-        pSprite = document.getElementById('player-sprite');
-      }
-      if (ghostSprites.length === 0) {
-        for (let i = 0; i < 5; i++) {
-          ghostSprites.push(document.getElementById('ghost-sprite-' + i));
-        }
-      }
-
       initWallCanvas();
     }
 
@@ -644,14 +603,6 @@
       updateCanvasWrapSize();
       requestAnimationFrame(updateCanvasWrapSize);
       setTimeout(updateCanvasWrapSize, 60);
-      
-      if (pSprite) pSprite.style.display = 'block';
-      ghostSprites.forEach(el => {
-        if (el) {
-          el.style.display = 'block';
-          el.className = 'sprite';
-        }
-      });
 
       lives = 3;
       timeLeft = 60; 
@@ -663,6 +614,7 @@
       isPowerMode = false;
       if (powerModeTimer) { clearInterval(powerModeTimer); powerModeTimer = null; }
       drowsinessHitCooldown = false;
+      isInvulnerable = false;
 
       document.getElementById('hud-status').style.display = 'none';
       document.getElementById('game-canvas-wrap').classList.remove('inverted');
@@ -680,7 +632,7 @@
         }
       }
 
-      player = { r: 15, c: 5, dr: 0, dc: 0, nextDr: 0, nextDc: 0, x: 5*ts, y: 15*ts };
+      player = { r: 15, c: 5, dr: 0, dc: 0, nextDr: 0, nextDc: 0, x: 5 * ts, y: 15 * ts };
       
       ghosts = [
         { id: 0, r: 7, c: 5, dr: -1, dc: 0, x: 5*ts, y: 7*ts, speed: 0.04, type: 'ghost', spawnR: 7, spawnC: 5 },
@@ -691,19 +643,31 @@
       ];
 
       document.getElementById('hud-timer').textContent = timeLeft;
-      clearInterval(timerId); cancelAnimationFrame(gameLoopId);
+      clearInterval(timerId); 
+      cancelAnimationFrame(gameLoopId);
       
       timerId = setInterval(() => {
-        timeLeft--; document.getElementById('hud-timer').textContent = timeLeft;
+        timeLeft--; 
+        document.getElementById('hud-timer').textContent = timeLeft;
         if (timeLeft <= 0) endGame(true, false);
       }, 1000);
 
+      lastLoopTime = performance.now();
+      accumulator = 0;
       gameLoopId = requestAnimationFrame(loop);
     }
 
     function updateLivesDisplay() {
       const hearts = ["🖤 🖤 🖤", "❤️ 🖤 🖤", "❤️ ❤️ 🖤", "❤️ ❤️ ❤️"];
       document.getElementById('hud-lives').textContent = hearts[Math.max(0, Math.min(3, lives))];
+    }
+
+    function canMoveTo(r, c) {
+      if (r < 0 || r >= rows) return false;
+      let wrappedC = c;
+      if (wrappedC < 0) wrappedC = cols - 1;
+      if (wrappedC >= cols) wrappedC = 0;
+      return map[r] && map[r][wrappedC] !== 1;
     }
 
     // --- CONTROLS ---
@@ -721,30 +685,76 @@
       setDir(dc, dr);
     }
 
+    function setDir(dc, dr) {
+      player.nextDc = dc;
+      player.nextDr = dr;
+      // Instant 180-degree turnaround if moving in the opposite direction
+      if ((dc === -player.dc && dc !== 0) || (dr === -player.dr && dr !== 0)) {
+        player.dc = dc;
+        player.dr = dr;
+      }
+    }
+
+    // Keyboard controls (Arrow keys + WASD)
     window.addEventListener('keydown', (e) => {
-      if(e.key === 'ArrowUp') handleInput(0, -1);
-      if(e.key === 'ArrowDown') handleInput(0, 1);
-      if(e.key === 'ArrowLeft') handleInput(-1, 0);
-      if(e.key === 'ArrowRight') handleInput(1, 0);
+      if (['ArrowUp', 'KeyW'].includes(e.code) || e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') {
+        e.preventDefault();
+        handleInput(0, -1);
+      } else if (['ArrowDown', 'KeyS'].includes(e.code) || e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') {
+        e.preventDefault();
+        handleInput(0, 1);
+      } else if (['ArrowLeft', 'KeyA'].includes(e.code) || e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') {
+        e.preventDefault();
+        handleInput(-1, 0);
+      } else if (['ArrowRight', 'KeyD'].includes(e.code) || e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') {
+        e.preventDefault();
+        handleInput(1, 0);
+      }
     });
 
     let touchStartX = 0, touchStartY = 0;
     window.addEventListener('touchstart', e => {
-      touchStartX = e.changedTouches[0].screenX;
-      touchStartY = e.changedTouches[0].screenY;
-    }, {passive: true});
+      if (e.touches && e.touches.length > 0) {
+        touchStartX = e.touches[0].clientX;
+        touchStartY = e.touches[0].clientY;
+      }
+    }, { passive: true });
 
     window.addEventListener('touchend', e => {
-      let dx = e.changedTouches[0].screenX - touchStartX;
-      let dy = e.changedTouches[0].screenY - touchStartY;
-      if (Math.abs(dx) > Math.abs(dy)) {
-        if (Math.abs(dx) > 30) handleInput(dx > 0 ? 1 : -1, 0); 
-      } else {
-        if (Math.abs(dy) > 30) handleInput(0, dy > 0 ? 1 : -1); 
+      if (e.changedTouches && e.changedTouches.length > 0) {
+        let dx = e.changedTouches[0].clientX - touchStartX;
+        let dy = e.changedTouches[0].clientY - touchStartY;
+        if (Math.abs(dx) > Math.abs(dy)) {
+          if (Math.abs(dx) > 25) handleInput(dx > 0 ? 1 : -1, 0); 
+        } else {
+          if (Math.abs(dy) > 25) handleInput(0, dy > 0 ? 1 : -1); 
+        }
       }
-    }, {passive: true});
+    }, { passive: true });
 
-    function setDir(dc, dr) { player.nextDc = dc; player.nextDr = dr; }
+    // Initialize D-pad pointerdown listeners for 0ms response latency
+    function initDpad() {
+      const dpadButtons = [
+        { id: 'btn-up', dc: 0, dr: -1 },
+        { id: 'btn-down', dc: 0, dr: 1 },
+        { id: 'btn-left', dc: -1, dr: 0 },
+        { id: 'btn-right', dc: 1, dr: 0 }
+      ];
+      dpadButtons.forEach(b => {
+        const el = document.getElementById(b.id);
+        if (el) {
+          el.addEventListener('pointerdown', (e) => {
+            e.preventDefault();
+            handleInput(b.dc, b.dr);
+          });
+        }
+      });
+    }
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initDpad);
+    } else {
+      initDpad();
+    }
 
     function eatTelfastPack() {
       cancelDrowsinessEffect();
@@ -775,40 +785,22 @@
       statusEl.style.color = '#3b0043';
       statusEl.textContent = `💊 TELFAST POWER (${powerModeTimeLeft}s)`;
 
-      updateGhostStyles();
-
       if (powerModeTimer) clearInterval(powerModeTimer);
       powerModeTimer = setInterval(() => {
         powerModeTimeLeft--;
         if (powerModeTimeLeft > 0) {
           statusEl.textContent = `💊 TELFAST POWER (${powerModeTimeLeft}s)`;
-          updateGhostStyles();
         } else {
           clearInterval(powerModeTimer);
           powerModeTimer = null;
           isPowerMode = false;
           statusEl.style.display = 'none';
-          updateGhostStyles();
           showToast("Telfast Power Ended!");
         }
       }, 1000);
     }
 
-    function updateGhostStyles() {
-      ghosts.forEach((g, i) => {
-        const el = ghostSprites[i] || document.getElementById('ghost-sprite-' + i);
-        if (!el) return;
-        if (isPowerMode) {
-          if (powerModeTimeLeft <= 2) {
-            el.className = 'sprite frightened frightened-warning';
-          } else {
-            el.className = 'sprite frightened';
-          }
-        } else {
-          el.className = 'sprite';
-        }
-      });
-    }
+    function updateGhostStyles() {}
 
     function triggerInversion(duration = 10) {
       if (isPowerMode) return;
@@ -848,111 +840,159 @@
       let dt = (currentNow - lastLoopTime) / 1000;
       lastLoopTime = currentNow;
 
+      // Prevent spiral of death on background tabs
       if (dt > 0.1) dt = 0.1;
-      const stepFactor = dt * 60;
+      accumulator += dt;
 
-      update(stepFactor);
-      draw();
-      if(timeLeft > 0 && lives > 0) gameLoopId = requestAnimationFrame(loop);
-    }
-
-    function update(stepFactor = 1) {
-      let targetX = player.c * ts; 
-      let targetY = player.r * ts;
-      
-      if (Math.abs(player.x - targetX) > ts || Math.abs(player.y - targetY) > ts) {
-        player.x = targetX; player.y = targetY;
+      while (accumulator >= FIXED_STEP) {
+        update();
+        accumulator -= FIXED_STEP;
       }
 
-      let dist = Math.abs(player.x - targetX) + Math.abs(player.y - targetY);
-      
-      if (dist < 2.5) { 
-        player.x = targetX; 
-        player.y = targetY;
-        
-        let nextR = player.r + player.nextDr;
-        let nextC = player.c + player.nextDc;
-        
-        if (nextC < 0) nextC = cols - 1;
-        if (nextC >= cols) nextC = 0;
+      draw();
 
-        if (map[nextR] && map[nextR][nextC] !== 1) {
-          player.dr = player.nextDr; 
+      if (timeLeft > 0 && lives > 0) {
+        gameLoopId = requestAnimationFrame(loop);
+      }
+    }
+
+    function checkEat(r, c) {
+      if (!map[r]) return;
+      if (map[r][c] === 2) {
+        map[r][c] = 0;
+        collectedPellets++;
+        if (collectedPellets >= totalPellets) endGame(true, true);
+      } else if (map[r][c] === 3) {
+        map[r][c] = 0;
+        collectedPellets++;
+        eatTelfastPack();
+        if (collectedPellets >= totalPellets) endGame(true, true);
+      }
+    }
+
+    function update() {
+      // 1. Move Player
+      const step = playerSpeed;
+
+      // Check if stopped but user has queued a valid direction
+      if (player.dc === 0 && player.dr === 0) {
+        if ((player.nextDc !== 0 || player.nextDr !== 0) && canMoveTo(player.r + player.nextDr, player.c + player.nextDc)) {
           player.dc = player.nextDc;
+          player.dr = player.nextDr;
         }
-        
-        let stepR = player.r + player.dr;
-        let stepC = player.c + player.dc;
-        
-        if (stepC < 0) stepC = cols - 1;
-        if (stepC >= cols) stepC = 0;
+      }
 
-        if (map[stepR] && map[stepR][stepC] === 1) {
-          player.dr = 0; 
-          player.dc = 0;
+      if (player.dc !== 0 || player.dr !== 0) {
+        let targetX = (player.c + player.dc) * ts;
+        let targetY = (player.r + player.dr) * ts;
+
+        let dist = 0;
+        if (player.dc === 1) dist = targetX - player.x;
+        else if (player.dc === -1) dist = player.x - targetX;
+        else if (player.dr === 1) dist = targetY - player.y;
+        else if (player.dr === -1) dist = player.y - targetY;
+
+        if (dist <= step) {
+          // Reached target tile center
+          player.x = targetX;
+          player.y = targetY;
+          player.c += player.dc;
+          player.r += player.dr;
+
+          // Wrap around if necessary
+          if (player.c < 0) { player.c = cols - 1; player.x = player.c * ts; }
+          if (player.c >= cols) { player.c = 0; player.x = 0; }
+
+          checkEat(player.r, player.c);
+
+          let leftover = step - dist;
+
+          // Check queued direction turn
+          if ((player.nextDc !== 0 || player.nextDr !== 0) && canMoveTo(player.r + player.nextDr, player.c + player.nextDc)) {
+            player.dc = player.nextDc;
+            player.dr = player.nextDr;
+          } else if (!canMoveTo(player.r + player.dr, player.c + player.dc)) {
+            player.dc = 0;
+            player.dr = 0;
+          }
+
+          if (leftover > 0 && (player.dc !== 0 || player.dr !== 0)) {
+            player.x += player.dc * leftover;
+            player.y += player.dr * leftover;
+          }
         } else {
-          player.c = stepC; 
-          player.r = stepR;
+          player.x += player.dc * step;
+          player.y += player.dr * step;
         }
-        
-        // Check eating items
-        if (map[player.r] && map[player.r][player.c] === 2) {
-          map[player.r][player.c] = 0; 
-          collectedPellets++;
-          if (collectedPellets >= totalPellets) endGame(true, true);
-        } else if (map[player.r] && map[player.r][player.c] === 3) {
-          map[player.r][player.c] = 0; 
-          collectedPellets++;
-          eatTelfastPack();
-          if (collectedPellets >= totalPellets) endGame(true, true);
-        }
-      } 
-      
-      player.x += player.dc * ts * 0.14 * stepFactor; 
-      player.y += player.dr * ts * 0.14 * stepFactor;
+      }
 
-      // Ghosts Update
+      // 2. Move Ghosts
       ghosts.forEach(g => {
-        let gtx = g.c * ts; let gty = g.r * ts;
-        
-        if (Math.abs(g.x - gtx) > ts || Math.abs(g.y - gty) > ts) {
-            g.x = gtx; g.y = gty;
-        }
+        const gSpeed = g.speed * ts;
+        let gTargetX = (g.c + g.dc) * ts;
+        let gTargetY = (g.r + g.dr) * ts;
 
-        let gdist = Math.abs(g.x - gtx) + Math.abs(g.y - gty);
-        if (gdist < 2.5) {
-          g.x = gtx; g.y = gty;
+        let gDist = 0;
+        if (g.dc === 1) gDist = gTargetX - g.x;
+        else if (g.dc === -1) gDist = g.x - gTargetX;
+        else if (g.dr === 1) gDist = gTargetY - g.y;
+        else if (g.dr === -1) gDist = g.y - gTargetY;
+
+        if (gDist <= gSpeed) {
+          g.x = gTargetX;
+          g.y = gTargetY;
+          g.c += g.dc;
+          g.r += g.dr;
+
+          if (g.c < 0) { g.c = cols - 1; g.x = g.c * ts; }
+          if (g.c >= cols) { g.c = 0; g.x = 0; }
+
           let possibleMoves = [];
           const dirs = [{dr:-1, dc:0}, {dr:1, dc:0}, {dr:0, dc:-1}, {dr:0, dc:1}];
-          
           dirs.forEach(d => {
+            let nr = g.r + d.dr;
+            let nc = g.c + d.dc;
+            if (nc < 0) nc = cols - 1;
+            if (nc >= cols) nc = 0;
+
+            let isReversing = (d.dr === -g.dr && d.dr !== 0) || (d.dc === -g.dc && d.dc !== 0);
+            if (!isReversing && map[nr] && map[nr][nc] !== 1) {
+              possibleMoves.push(d);
+            }
+          });
+
+          if (possibleMoves.length === 0) {
+            dirs.forEach(d => {
               let nr = g.r + d.dr;
               let nc = g.c + d.dc;
               if (nc < 0) nc = cols - 1;
               if (nc >= cols) nc = 0;
-              
-              let isReversing = (d.dr === -g.dr && d.dr !== 0) || (d.dc === -g.dc && d.dc !== 0);
-              if (!isReversing && map[nr] && map[nr][nc] !== 1) {
-                  possibleMoves.push(d);
-              }
-          });
+              if (map[nr] && map[nr][nc] !== 1) possibleMoves.push(d);
+            });
+          }
 
-          if(possibleMoves.length > 0) {
+          if (possibleMoves.length > 0) {
             let move = possibleMoves[Math.floor(Math.random() * possibleMoves.length)];
-            g.dr = move.dr; g.dc = move.dc;
-          } else { 
-            g.dr *= -1; g.dc *= -1; 
-          } 
-          
-          g.c += g.dc; 
-          if (g.c < 0) g.c = cols - 1;
-          if (g.c >= cols) g.c = 0;
-          g.r += g.dr;
+            g.dr = move.dr; 
+            g.dc = move.dc;
+          } else {
+            g.dr = -g.dr; 
+            g.dc = -g.dc;
+          }
+
+          let gLeftover = gSpeed - gDist;
+          if (gLeftover > 0 && (g.dc !== 0 || g.dr !== 0)) {
+            g.x += g.dc * gLeftover;
+            g.y += g.dr * gLeftover;
+          }
         } else {
-          g.x += g.dc * ts * g.speed * stepFactor; g.y += g.dr * ts * g.speed * stepFactor;
+          g.x += g.dc * gSpeed;
+          g.y += g.dr * gSpeed;
         }
 
-        if (Math.abs(player.x - g.x) < ts/1.5 && Math.abs(player.y - g.y) < ts/1.5) {
+        // Check collision with player
+        const hitThreshold = ts * 0.7;
+        if (Math.abs(player.x - g.x) < hitThreshold && Math.abs(player.y - g.y) < hitThreshold) {
           handleGhostCollision(g);
         }
       });
@@ -1017,62 +1057,79 @@
     function draw() {
       ctx.clearRect(0, 0, cvs.width, cvs.height);
       
-      // 1. Draw cached background and maze walls in a single ultra-fast blit
+      // 1. Draw cached background and maze walls
       if (wallCanvas) {
         ctx.drawImage(wallCanvas, 0, 0);
       }
 
-      // 2. Draw white dots with a single batched path (no shadowBlur overhead)
+      // 2. Draw white dots with a single batched path
       ctx.fillStyle = '#ffffff';
       ctx.beginPath();
-      for(let r=0; r<rows; r++) {
-        for(let c=0; c<cols; c++) {
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
           if (map[r][c] === 2) {
-            let cx = c*ts + ts/2;
-            let cy = r*ts + ts/2;
-            ctx.moveTo(cx + ts*0.16, cy);
-            ctx.arc(cx, cy, ts*0.16, 0, Math.PI*2);
+            let cx = c * ts + ts / 2;
+            let cy = r * ts + ts / 2;
+            ctx.moveTo(cx + ts * 0.16, cy);
+            ctx.arc(cx, cy, ts * 0.16, 0, Math.PI * 2);
           }
         }
       }
       ctx.fill();
 
-      // 3. Draw Telfast Packs
-      for(let r=0; r<rows; r++) {
-        for(let c=0; c<cols; c++) {
+      // 3. Draw Telfast Packs from pre-scaled cache
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
           if (map[r][c] === 3) {
             const packIdx = (r + c) % packImgs.length;
-            const imgToDraw = packImgs[packIdx];
-            if (imgToDraw && imgToDraw.complete && imgToDraw.naturalWidth !== 0) {
-              ctx.drawImage(imgToDraw, c*ts + ts*0.05, r*ts + ts*0.05, ts*0.9, ts*0.9);
+            const cached = packCaches[packIdx];
+            const imgToDraw = cached || packImgs[packIdx];
+            if (imgToDraw && (cached || (imgToDraw.complete && imgToDraw.naturalWidth !== 0))) {
+              ctx.drawImage(imgToDraw, c * ts + ts * 0.05, r * ts + ts * 0.05, ts * 0.9, ts * 0.9);
             }
           }
         }
       }
 
-      // 4. Update PacMan & Ghost positions via GPU transform: translate3d
-      const cvsW = cols * ts;
-      const cvsH = rows * ts;
-
-      let angle = 0;
-      if (player.dc === 1) angle = 0;
-      else if (player.dc === -1) angle = 180;
-      else if (player.dr === 1) angle = 90;
-      else if (player.dr === -1) angle = -90;
-
-      if (pSprite) {
-        const px = Math.round(cachedOffsetX + (player.x + ts/2) / cvsW * cachedRenderW);
-        const py = Math.round(cachedOffsetY + (player.y + ts/2) / cvsH * cachedRenderH);
-        pSprite.style.transform = `translate3d(${px}px, ${py}px, 0) translate(-50%, -50%) rotate(${angle}deg)`;
-      }
-
+      // 4. Draw Ghosts on Canvas
       for (let i = 0; i < ghosts.length; i++) {
         const g = ghosts[i];
-        const gSprite = ghostSprites[i];
-        if (!gSprite) continue;
-        const gx = Math.round(cachedOffsetX + (g.x + ts/2) / cvsW * cachedRenderW);
-        const gy = Math.round(cachedOffsetY + (g.y + ts/2) / cvsH * cachedRenderH);
-        gSprite.style.transform = `translate3d(${gx}px, ${gy}px, 0) translate(-50%, -50%)`;
+        const gImg = ghostImgs[i];
+        if (!gImg || !gImg.complete || gImg.naturalWidth === 0) continue;
+
+        ctx.save();
+        if (isPowerMode) {
+          if (powerModeTimeLeft <= 2) {
+            const flash = Math.floor(performance.now() / 150) % 2 === 0;
+            ctx.globalAlpha = flash ? 0.85 : 0.3;
+          } else {
+            ctx.globalAlpha = 0.55;
+          }
+          ctx.shadowColor = '#00ffff';
+          ctx.shadowBlur = 8;
+        }
+        ctx.drawImage(gImg, g.x + ts * 0.05, g.y + ts * 0.05, ts * 0.9, ts * 0.9);
+        ctx.restore();
+      }
+
+      // 5. Draw Pac-Man on Canvas
+      if (playerImg.complete && playerImg.naturalWidth !== 0) {
+        ctx.save();
+        if (isInvulnerable) {
+          const flicker = Math.floor(performance.now() / 100) % 2 === 0;
+          ctx.globalAlpha = flicker ? 0.3 : 1.0;
+        }
+
+        let angle = 0;
+        if (player.dc === 1) angle = 0;
+        else if (player.dc === -1) angle = 180;
+        else if (player.dr === 1) angle = 90;
+        else if (player.dr === -1) angle = -90;
+
+        ctx.translate(player.x + ts / 2, player.y + ts / 2);
+        ctx.rotate((angle * Math.PI) / 180);
+        ctx.drawImage(playerImg, -ts * 0.45, -ts * 0.45, ts * 0.9, ts * 0.9);
+        ctx.restore();
       }
     }
 
@@ -1085,11 +1142,6 @@
       
       const toastEl = document.getElementById('toast');
       if (toastEl) toastEl.classList.remove('show');
-      
-      if (pSprite) pSprite.style.display = 'none';
-      ghostSprites.forEach(el => {
-        if (el) el.style.display = 'none';
-      });
 
       document.getElementById('screen-game').style.display = 'none';
       document.getElementById('screen-result').style.display = 'flex';
