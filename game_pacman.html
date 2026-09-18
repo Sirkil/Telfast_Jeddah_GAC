@@ -142,11 +142,10 @@
       padding: clamp(6px, 1.1vh, 10px) clamp(12px, 2vw, 22px); 
       z-index: 10; 
       width: 100%; 
-      background: rgba(99, 1, 112, 0.55);
+      background: rgba(99, 1, 112, 0.85);
       border: 2px solid var(--border);
-      backdrop-filter: blur(12px);
       border-radius: 18px;
-      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
       flex-shrink: 0;
     }
     .hud-text { font-size: clamp(1.1rem, 2vh, 1.55rem); font-weight: 800; color: #ffffff; }
@@ -184,7 +183,7 @@
       position: relative; 
       border-radius: 18px; 
       overflow: hidden; 
-      box-shadow: 0 15px 40px rgba(99, 1, 112, 0.6), 0 0 25px rgba(247, 167, 6, 0.35); 
+      box-shadow: 0 6px 18px rgba(99, 1, 112, 0.4); 
       border: 3px solid var(--accent);
       background: rgba(18, 3, 24, 0.95);
       transition: border-color 0.3s;
@@ -194,11 +193,13 @@
       box-sizing: border-box;
       flex-shrink: 0;
       aspect-ratio: 11 / 21;
+      will-change: border-color;
+      contain: layout style paint;
     }
 
     #game-canvas-wrap.inverted {
       border-color: #ff3366;
-      box-shadow: 0 15px 40px rgba(255, 51, 102, 0.6), 0 0 25px rgba(255, 51, 102, 0.5);
+      box-shadow: 0 6px 18px rgba(255, 51, 102, 0.4);
     }
 
     /* Hazy and blurred maze effect when dizziness mode is active */
@@ -206,26 +207,21 @@
       display: block; 
       width: 100%; 
       height: 100%; 
-      transition: filter 0.4s ease;
-    }
-
-    #game-canvas-wrap.inverted #maze-canvas {
-      filter: blur(2.5px) brightness(0.95);
     }
 
     #game-canvas-wrap.inverted::after {
       content: '';
       position: absolute;
       inset: 0;
-      background: radial-gradient(circle, rgba(255, 51, 102, 0.22) 0%, rgba(99, 1, 112, 0.45) 100%);
+      background: rgba(255, 51, 102, 0.18);
       pointer-events: none;
       z-index: 15;
       animation: dizzy-pulse 1.8s ease-in-out infinite alternate;
     }
 
     @keyframes dizzy-pulse {
-      0% { opacity: 0.35; }
-      100% { opacity: 0.8; }
+      0% { opacity: 0.3; }
+      100% { opacity: 0.7; }
     }
 
     #controls-panel {
@@ -236,12 +232,11 @@
       align-items: center;
       justify-content: center;
       gap: clamp(8px, 1.8vh, 18px);
-      background: rgba(99, 1, 112, 0.5);
+      background: rgba(99, 1, 112, 0.85);
       border: 2px solid var(--border);
-      backdrop-filter: blur(12px);
       border-radius: 18px;
       padding: clamp(10px, 1.5vh, 20px) 6px;
-      box-shadow: 0 8px 30px rgba(0,0,0,0.4);
+      box-shadow: 0 4px 14px rgba(0,0,0,0.3);
     }
 
     .dpad-btn {
@@ -276,9 +271,9 @@
       z-index: 10;
       display: none; 
       object-fit: contain;
-      filter: drop-shadow(0 2px 5px rgba(0,0,0,0.5));
       will-change: transform;
       pointer-events: none;
+      backface-visibility: hidden;
     }
 
     .sprite.frightened {
@@ -315,7 +310,8 @@
       font-weight: 700;
       z-index: 99999;
       transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+      will-change: transform;
     }
     .toast.show {
       transform: translateX(-50%) translateY(0);
@@ -382,7 +378,7 @@
   </div>
 
   <div class="game-container" id="screen-result" style="display: none; text-align: center; justify-content: center;">
-    <div style="background: rgba(99, 1, 112, 0.6); border: 2px solid var(--accent); backdrop-filter: blur(15px); padding: 36px 30px; border-radius: 28px; box-shadow: 0 15px 45px rgba(0,0,0,0.5); width: 100%; max-width: 500px; display: flex; flex-direction: column; align-items: center;">
+    <div style="background: rgba(99, 1, 112, 0.88); border: 2px solid var(--accent); padding: 36px 30px; border-radius: 28px; box-shadow: 0 6px 20px rgba(0,0,0,0.4); width: 100%; max-width: 500px; display: flex; flex-direction: column; align-items: center;">
       <div style="display: flex; gap: 16px; justify-content: center; align-items: center; margin-bottom: 16px;">
         <img src="assets/telfast_logo.png" alt="Telfast Logo" style="max-height: 48px; object-fit: contain; filter: drop-shadow(0 4px 10px rgba(0,0,0,0.5));">
         <img src="assets/opella_logo.png" alt="Opella Logo" style="max-height: 28px; object-fit: contain; filter: drop-shadow(0 4px 10px rgba(0,0,0,0.5));">
@@ -530,7 +526,7 @@
             wallCtx.roundRect(x1, y1, w, h, 6);
             wallCtx.fill();
 
-            wallCtx.strokeStyle = controlsInverted ? '#ff3366' : '#f7a706';
+            wallCtx.strokeStyle = '#f7a706';
             wallCtx.lineWidth = 2;
             wallCtx.stroke();
           }
@@ -602,16 +598,22 @@
       });
     }
 
-    window.addEventListener('resize', updateCanvasWrapSize);
-    window.addEventListener('orientationchange', updateCanvasWrapSize);
+    let resizeRAF = 0;
+    function debouncedResize() {
+      if (resizeRAF) cancelAnimationFrame(resizeRAF);
+      resizeRAF = requestAnimationFrame(updateCanvasWrapSize);
+    }
+
+    window.addEventListener('resize', debouncedResize);
+    window.addEventListener('orientationchange', debouncedResize);
 
     if (window.ResizeObserver) {
       window.addEventListener('DOMContentLoaded', () => {
         const roRow = document.getElementById('game-layout-row');
-        if (roRow) new ResizeObserver(() => updateCanvasWrapSize()).observe(roRow);
+        if (roRow) new ResizeObserver(debouncedResize).observe(roRow);
       });
       const roRow = document.getElementById('game-layout-row');
-      if (roRow) new ResizeObserver(() => updateCanvasWrapSize()).observe(roRow);
+      if (roRow) new ResizeObserver(debouncedResize).observe(roRow);
     }
 
     function proceedFromStart() {
@@ -751,7 +753,6 @@
 
     function cancelDrowsinessEffect() {
       controlsInverted = false;
-      renderWalls();
       if (controlsInvertedTimer) {
         clearInterval(controlsInvertedTimer);
         controlsInvertedTimer = null;
@@ -813,7 +814,6 @@
       if (isPowerMode) return;
 
       controlsInverted = true;
-      renderWalls();
       controlsInvertedTimeLeft = duration;
       
       const statusEl = document.getElementById('hud-status');
@@ -835,7 +835,6 @@
           clearInterval(controlsInvertedTimer);
           controlsInvertedTimer = null;
           controlsInverted = false;
-          renderWalls();
           if (!isPowerMode) statusEl.style.display = 'none';
           document.getElementById('game-canvas-wrap').classList.remove('inverted');
         }
@@ -909,8 +908,8 @@
         }
       } 
       
-      player.x += player.dc * ts * 0.1 * stepFactor; 
-      player.y += player.dr * ts * 0.1 * stepFactor;
+      player.x += player.dc * ts * 0.14 * stepFactor; 
+      player.y += player.dr * ts * 0.14 * stepFactor;
 
       // Ghosts Update
       ghosts.forEach(g => {
@@ -1120,7 +1119,53 @@
     }
 
     function launchConfetti(duration) {
-      const canvas = document.getElementById("confetti-canvas"); if(!canvas) return; const ctx = canvas.getContext("2d"); canvas.style.display = "block"; canvas.width = window.innerWidth; canvas.height = window.innerHeight; const pieces = []; const colors = ["#f7a706", "#630170", "#ffffff", "#ffb82e", "#a820c4", "#ff4081"]; for (let i = 0; i < 100; i++) pieces.push({ x: Math.random() * canvas.width, y: -10 - Math.random() * 200, r: 5 + Math.random() * 7, color: colors[Math.floor(Math.random() * colors.length)], vx: (Math.random() - 0.5) * 4, vy: 2 + Math.random() * 4, rot: Math.random() * 360, rs: (Math.random() - 0.5) * 6 }); const end = Date.now() + duration; (function frame() { ctx.clearRect(0, 0, canvas.width, canvas.height); pieces.forEach((p) => { ctx.save(); ctx.translate(p.x, p.y); ctx.rotate((p.rot * Math.PI) / 180); ctx.fillStyle = p.color; ctx.fillRect(-p.r / 2, -p.r / 2, p.r, p.r * 0.6); ctx.restore(); p.x += p.vx; p.y += p.vy; p.vy += 0.05; p.rot += p.rs; }); if (Date.now() < end) requestAnimationFrame(frame); else { ctx.clearRect(0, 0, canvas.width, canvas.height); canvas.style.display = "none"; } })();
+      const canvas = document.getElementById("confetti-canvas");
+      if (!canvas) return;
+      const cCtx = canvas.getContext("2d");
+      canvas.style.display = "block";
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      const pieces = [];
+      const colors = ["#f7a706", "#630170", "#ffffff", "#ffb82e", "#a820c4", "#ff4081"];
+      const count = 60; // reduced for performance
+      for (let i = 0; i < count; i++) {
+        pieces.push({
+          x: Math.random() * canvas.width,
+          y: -10 - Math.random() * 200,
+          r: 5 + Math.random() * 7,
+          color: colors[Math.floor(Math.random() * colors.length)],
+          vx: (Math.random() - 0.5) * 4,
+          vy: 2 + Math.random() * 4,
+          rot: Math.random() * 360,
+          rs: (Math.random() - 0.5) * 6
+        });
+      }
+      const end = performance.now() + duration;
+      let lastT = performance.now();
+      (function frame(now) {
+        const dt = Math.min((now - lastT) / 16.67, 3); // normalize to ~60fps, cap at 3x
+        lastT = now;
+        cCtx.clearRect(0, 0, canvas.width, canvas.height);
+        for (let i = 0; i < pieces.length; i++) {
+          const p = pieces[i];
+          cCtx.save();
+          cCtx.translate(p.x, p.y);
+          cCtx.rotate((p.rot * Math.PI) / 180);
+          cCtx.fillStyle = p.color;
+          cCtx.fillRect(-p.r / 2, -p.r / 2, p.r, p.r * 0.6);
+          cCtx.restore();
+          p.x += p.vx * dt;
+          p.y += p.vy * dt;
+          p.vy += 0.05 * dt;
+          p.rot += p.rs * dt;
+        }
+        if (now < end) {
+          requestAnimationFrame(frame);
+        } else {
+          cCtx.clearRect(0, 0, canvas.width, canvas.height);
+          canvas.style.display = "none";
+        }
+      })(performance.now());
     }
   </script>
 </body>

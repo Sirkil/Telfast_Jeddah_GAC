@@ -397,7 +397,7 @@
             lockBoard = true;
             const allCards = document.querySelectorAll('.memory-card');
 
-            showToast("Memorize the cards! ⏳ (7s)");
+            showToast("Memorize the cards! ⏳ (5s)");
 
             setTimeout(() => {
                 allCards.forEach(c => c.classList.add('flipped'));
@@ -410,7 +410,7 @@
                     timerInterval = setInterval(tickTimer, 1000);
                     showToast("Go! Find all pairs! 🚀");
                 }, 600);
-            }, 7100);
+            }, 5100);
         }
 
         function tickTimer() {
